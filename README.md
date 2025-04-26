@@ -1,3 +1,4 @@
+
 # Problems
 
 ## Audio recordings contain human voices
@@ -35,12 +36,41 @@ Basically remove weak signal from the audio. The resulting spectrogram looked re
 
 ## Split the spectrogram into bands, then train and inference on each
 
+8kHz failed really hard, the upper split basically doesn't work at all (very low AUC in training). Maybe a split at like 4kHz would be better?
 
+## EfficientNet B0 input shape
+
+A lot of documentations said that the input shape is 224x224, but the target shape in the baseline notebook is 256x256? Well probably doesn't matter, the score still went down XD
+
+The resampling method doesn't change anything, lanczos just make the background a bit brighter.
+## Higher n_mels
+
+When n_mels > 256 and n_fft = 1024, gaps in frequency start to show. 
 # Score
 
-| Models                                                        | LB score | Notes                                                 |
-| ------------------------------------------------------------- | -------- | ----------------------------------------------------- |
-| Baseline                                                      | 0.761    |                                                       |
-| Baseline, no voice                                            | 0.793    | Removing human voices helped a lot                    |
-| Baseline, no voice, PCEN, 128 hop_length                      | 0.786    | PCEN doesn't really works (4th place last year tried) |
-| Baseline, no voice, 128 hop_length, mu_expand noise filtering | 0.811    | This is huge XD                                       |
+| Models                                                                                         | LB score | Notes                                                                           |
+| ---------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------- |
+| Baseline (5 folds)                                                                             | 0.761    |                                                                                 |
+| Baseline, no voice (5 folds)                                                                   | 0.793    | Removing human voices helped a lot                                              |
+| Baseline, no voice, PCEN, 128 hop_length (5 folds)                                             | 0.786    | PCEN doesn't really works (4th place last year tried)                           |
+| Baseline, no voice, 128 hop_length, mu_expand noise filtering (5 folds)                        | 0.811    | This is huge XD                                                                 |
+| Baseline, no voice, 128 hop_length, mu_expand noise filtering (1 folds)                        | 0.783    | **New baseline**                                                                |
+| 8kHz split (3 low, 3 high ensemble)                                                            | 0.741    | XDDDD, the high split is basically useless, maybe lowering the split will help. |
+| Baseline, 224x224 no scaling (1 fold)                                                          | 0.777    |                                                                                 |
+| Baseline, no augmentation (1 fold)                                                             | 0.785    |                                                                                 |
+| Baseline, brightness augmentation only (1 fold)                                                | 0.777    | ????? what ?????                                                                |
+| Baseline, XY masking augmentation only (1 fold)                                                | 0.775    | this doesn't make any sense XDDD                                                |
+| Baseline, no augmentation, mixup alpha = 1 (1 fold)                                            | 0.785    |                                                                                 |
+| Baseline, no augment, batch_size=16, mixup_alpha=0.2 (1 fold)                                  | 0.784    |                                                                                 |
+| Baseline, no augment, batch_size = 8, mixup_alpha = 0.2 (1 fold)                               | 0.782    |                                                                                 |
+| Same as above, fft = 2048 (1 fold)                                                             | 0.755    | XDD Val AUC is 0.87 right from epoch 1, pretty sus                              |
+| fft = 2048, batch_size=32, default augment, mixup_alpha = 0.4 (basically all default) (1 fold) | 0.809    | ??????????? why ???????? oh well<br>**New baseline**                            |
+|                                                                                                |          |                                                                                 |
+
+# Things to try
+- Tweaking augmentation probabilities (XY masking, brightness)
+- Submission CSV post-processing (prediction smoothing by averaging adjacent rows)
+	- Example: `def smooth_submission()` in this [notebook](https://www.kaggle.com/code/tomkkk/change-secondary-labels-in-train-csv)
+- Optimizer & scheduler hyper-parameters.
+- Test time augmentation
+- Overlapping inference window
