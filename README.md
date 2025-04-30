@@ -1,4 +1,3 @@
-
 # Problems
 
 ## Audio recordings contain human voices
@@ -42,30 +41,39 @@ Basically remove weak signal from the audio. The resulting spectrogram looked re
 
 A lot of documentations said that the input shape is 224x224, but the target shape in the baseline notebook is 256x256? Well probably doesn't matter, the score still went down XD
 
-The resampling method doesn't change anything, lanczos just make the background a bit brighter.
+The resampling method doesn't seems to change anything, lanczos just make the background a bit brighter.
 ## Higher n_mels
 
 When n_mels > 256 and n_fft = 1024, gaps in frequency start to show. 
+## Prediction temporal smoothing
+By averaging adjacent rows (coresponding to 5 seconds soundscape chunks that are adjacent to each other), the prediction is more stable over time. Increase LB score by ~0.015, huge XD
+## Pseudo labelling
+Included in the dataset is `train_soundscapes`, containing unlabeled 1 minute soundscapes, similar to those in the validation set. By cutting these up and label them, we can gain more data to train newer models on.
 # Score
 
-| Models                                                                                         | LB score | Notes                                                                           |
-| ---------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| Baseline (5 folds)                                                                             | 0.761    |                                                                                 |
-| Baseline, no voice (5 folds)                                                                   | 0.793    | Removing human voices helped a lot                                              |
-| Baseline, no voice, PCEN, 128 hop_length (5 folds)                                             | 0.786    | PCEN doesn't really works (4th place last year tried)                           |
-| Baseline, no voice, 128 hop_length, mu_expand noise filtering (5 folds)                        | 0.811    | This is huge XD                                                                 |
-| Baseline, no voice, 128 hop_length, mu_expand noise filtering (1 folds)                        | 0.783    | **New baseline**                                                                |
-| 8kHz split (3 low, 3 high ensemble)                                                            | 0.741    | XDDDD, the high split is basically useless, maybe lowering the split will help. |
-| Baseline, 224x224 no scaling (1 fold)                                                          | 0.777    |                                                                                 |
-| Baseline, no augmentation (1 fold)                                                             | 0.785    |                                                                                 |
-| Baseline, brightness augmentation only (1 fold)                                                | 0.777    | ????? what ?????                                                                |
-| Baseline, XY masking augmentation only (1 fold)                                                | 0.775    | this doesn't make any sense XDDD                                                |
-| Baseline, no augmentation, mixup alpha = 1 (1 fold)                                            | 0.785    |                                                                                 |
-| Baseline, no augment, batch_size=16, mixup_alpha=0.2 (1 fold)                                  | 0.784    |                                                                                 |
-| Baseline, no augment, batch_size = 8, mixup_alpha = 0.2 (1 fold)                               | 0.782    |                                                                                 |
-| Same as above, fft = 2048 (1 fold)                                                             | 0.755    | XDD Val AUC is 0.87 right from epoch 1, pretty sus                              |
-| fft = 2048, batch_size=32, default augment, mixup_alpha = 0.4 (basically all default) (1 fold) | 0.809    | ??????????? why ???????? oh well<br>**New baseline**                            |
-|                                                                                                |          |                                                                                 |
+| Models                                                                                          | AUC    | LB score | Notes                                                                           |
+| ----------------------------------------------------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| Baseline (5 folds)                                                                              |        | 0.761    |                                                                                 |
+| Baseline, no voice (5 folds)                                                                    | 0.9473 | 0.793    | Removing human voices helped a lot                                              |
+| Baseline, no voice, PCEN, 128 hop_length (5 folds)                                              | 0.9460 | 0.786    | PCEN doesn't really works (4th place last year tried)                           |
+| Baseline, no voice, 128 hop_length, mu_expand noise filtering (5 folds)                         | 0.9448 | 0.811    | This is huge XD                                                                 |
+| Baseline, no voice, 128 hop_length, mu_expand noise filtering (1 folds)                         | 0.9427 | 0.783    | **New baseline**                                                                |
+| 8kHz split (3 low, 3 high ensemble)                                                             | ---    | 0.741    | XDDDD, the high split is basically useless, maybe lowering the split will help. |
+| Baseline, 224x224 no scaling (1 fold)                                                           | 0.9414 | 0.777    |                                                                                 |
+| Baseline, no augmentation (1 fold)                                                              | 0.9375 | 0.785    |                                                                                 |
+| Baseline, brightness augmentation only (1 fold)                                                 | 0.9415 | 0.777    | ????? what ?????                                                                |
+| Baseline, XY masking augmentation only (1 fold)                                                 | 0.9452 | 0.775    | this doesn't make any sense XDDD                                                |
+| Baseline, no augmentation, mixup alpha = 1 (1 fold)                                             | 0.9375 | 0.785    |                                                                                 |
+| Baseline, no augment, batch_size=16, mixup_alpha=0.2 (1 fold)                                   | 0.9452 | 0.784    |                                                                                 |
+| Baseline, no augment, batch_size = 8, mixup_alpha = 0.2 (1 fold)                                | 0.9332 | 0.782    |                                                                                 |
+| Same as above, fft = 2048 (1 fold)                                                              | 0.9416 | 0.755    | XDD Val AUC is 0.87 right from epoch 1, pretty sus                              |
+| fft = 2048, batch_size=32, default augment, mixup_alpha = 0.4 (basically all default) (1 fold)  | 0.9422 | 0.809    | ??????????? why ???????? oh well<br>**New baseline**                            |
+| 4096_fft, 256_mel, hop mismatch (16 train, 128 inference)                                       | 0.9434 | 0.785    |                                                                                 |
+| 4096_fft, 512_mel&hop, 2 pass mu_expand = 63                                                    | 0.9441 | 0.788    | Best AUC at epoch 9, might be overfitting?                                      |
+| Same as above, batch_size = 16                                                                  | 0.9435 | 0.756    | XDDD nah                                                                        |
+| Same as above, batch_size = 64                                                                  | 0.9397 | 0.785    | welp batch_size = 32 still da best                                              |
+| Same as above, with prediction temporal smoothing                                               | ---    | 0.798    | !!!! **wowowowow** !!!!                                                         |
+| Baseline, 4096_fft, 256_mel&hop, 2 pass mu_expand = 63, batch_size = 32 (no temporal smoothing) | 0.9445 | 0.788    | welp 2048 fft still da best                                                     |
 
 # Things to try
 - Tweaking augmentation probabilities (XY masking, brightness)
@@ -74,3 +82,6 @@ When n_mels > 256 and n_fft = 1024, gaps in frequency start to show.
 - Optimizer & scheduler hyper-parameters.
 - Test time augmentation
 - Overlapping inference window
+
+- 3 input channels: `timm` already modified the model to accomodate for 1 channel input, but [3 channel input](https://towardsdatascience.com/transfer-learning-on-greyscale-images-how-to-fine-tune-pretrained-models-on-black-and-white-9a5150755c7a/) might yield better result.
+- [Focal loss BCE](https://www.kaggle.com/code/hideyukizushi/bird25-onlyinf-v2-s-focallossbce-cv-962-lb-829)
